@@ -1,0 +1,91 @@
+--- nginx.spec.org	2022-05-16 23:41:58.000000000 +0900
++++ nginx.spec	2022-09-12 17:04:05.121874131 +0900
+@@ -67,6 +67,8 @@
+ Source104:            50x.html
+ Source200:            README.dynamic
+ Source210:            UPGRADE-NOTES-1.6-to-1.10
++Source300:            ngx_mruby-2.2.5.tar.gz
++Source301:            ngx_devel_kit-0.3.1.tar.gz
+ 
+ # removes -Werror in upstream build scripts.  -Werror conflicts with
+ # -D_FORTIFY_SOURCE=2 causing warnings to turn into errors.
+@@ -242,6 +244,17 @@
+ Requires:             perl(ExtUtils::Embed)
+ Requires:             zlib-devel
+ 
++%package mod-http-mruby
++Summary:              Nginx MRuby module
++BuildRequires:        rubygem-rake
++BuildRequires:        bison
++Requires:             nginx(abi) = %{nginx_abiversion}
++
++%description mod-http-mruby
++%{summary}.
++
++
++
+ %description mod-devel
+ %{summary}.
+ 
+@@ -269,6 +282,15 @@
+ cp -a ../%{name}-%{version} ../%{name}-%{version}-%{release}-src
+ mv ../%{name}-%{version}-%{release}-src .
+ 
++# ngx_mruby
++cd %{_builddir}
++tar xzf %{SOURCE300}
++tar xzf %{SOURCE301}
++cd ngx_mruby-2.2.5
++./configure --enable-dynamic-module --with-ngx-src-root=../nginx-%{version} --with-ndk-root=../ngx_devel_kit-0.3.1
++make build_mruby
++make generate_gems_config_dynamic
++cd %{_builddir}/nginx-%{version}
+ 
+ %build
+ # nginx does not utilize a standard configure script.  It has its own
+@@ -333,7 +355,9 @@
+     --with-stream_ssl_preread_module \
+     --with-threads \
+     --with-cc-opt="%{optflags} $(pcre-config --cflags)" \
+-    --with-ld-opt="$nginx_ldopts"; then
++    --with-ld-opt="$nginx_ldopts" \
++    --add-dynamic-module=../ngx_devel_kit-0.3.1 \
++    --add-dynamic-module=../ngx_mruby-2.2.5; then
+   : configure failed
+   cat objs/autoconf.err
+   exit 1
+@@ -431,6 +455,10 @@
+     > %{buildroot}%{nginx_moduleconfdir}/mod-mail.conf
+ echo 'load_module "%{nginx_moduledir}/ngx_stream_module.so";' \
+     > %{buildroot}%{nginx_moduleconfdir}/mod-stream.conf
++echo 'load_module "%{nginx_moduledir}/ndk_http_module.so";' \
++    > %{buildroot}%{nginx_moduleconfdir}/mod-http-mruby.conf
++echo 'load_module "%{nginx_moduledir}/ngx_http_mruby_module.so.so";' \
++    >> %{buildroot}%{nginx_moduleconfdir}/mod-http-mruby.conf
+ 
+ # Install files for supporting nginx module builds
+ ## Install source files
+@@ -490,6 +518,11 @@
+     /usr/bin/systemctl reload nginx.service >/dev/null 2>&1 || :
+ fi
+ 
++%post mod-http-mruby
++if [ $1 -eq 1 ]; then
++    /usr/bin/systemctl reload nginx.service >/dev/null 2>&1 || :
++fi
++
+ %preun
+ %systemd_preun nginx.service
+ 
+@@ -580,6 +613,11 @@
+ %{nginx_moduleconfdir}/mod-stream.conf
+ %{nginx_moduledir}/ngx_stream_module.so
+ 
++%files mod-http-mruby
++%{nginx_moduleconfdir}/mod-http-mruby.conf
++%{nginx_moduledir}/ndk_http_module.so
++%{nginx_moduledir}/ngx_http_mruby_module.so
++
+ %files mod-devel
+ %{_rpmmacrodir}/macros.nginxmods
+ %{_fileattrsdir}/nginxmods.attr
