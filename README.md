@@ -1,0 +1,2 @@
+# ngx_mruby_rpm
+ngx_mrubyのRPMを作るための環境とかスクリプトとか
