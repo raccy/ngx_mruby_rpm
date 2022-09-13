@@ -14,3 +14,21 @@ ngx_mrubyのRPMを作るための環境とかスクリプトとか
 - perl-generators
 - rubygem-rake
 - bison
+
+## RPMの作成方法
+
+```
+./make_rpm.sh
+```
+
+work直下にnginx-mod-http-mrubyのRPMが作成されます。
+
+## RPMのインストール方法
+
+nginx等をインストールしてから
+
+```
+rpm -ivh RPMファイル
+```
+
+としてください。同じバージョンのngixnでしか動作しませんので、ご注意ください。
