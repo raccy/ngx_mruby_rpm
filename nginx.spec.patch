@@ -1,15 +1,14 @@
---- a/nginx.spec	2022-09-13 10:28:13.425031821 +0900
-+++ b/nginx.spec	2022-09-13 10:27:56.600036687 +0900
-@@ -67,6 +67,8 @@
+--- a/nginx.spec	2022-09-30 13:49:12.387568844 +0900
++++ b/nginx.spec	2022-09-30 13:48:07.325072657 +0900
+@@ -67,6 +67,7 @@
  Source104:            50x.html
  Source200:            README.dynamic
  Source210:            UPGRADE-NOTES-1.6-to-1.10
 +Source300:            ngx_mruby-2.2.5.tar.gz
-+Source301:            ngx_devel_kit-0.3.1.tar.gz
  
  # removes -Werror in upstream build scripts.  -Werror conflicts with
  # -D_FORTIFY_SOURCE=2 causing warnings to turn into errors.
-@@ -219,6 +221,15 @@
+@@ -219,6 +220,15 @@
  %description mod-stream
  %{summary}.
  
@@ -25,32 +24,31 @@
  %package mod-devel
  Summary:              Nginx module development files
  Requires:             nginx = %{epoch}:%{version}-%{release}
-@@ -269,6 +280,15 @@
+@@ -269,6 +279,14 @@
  cp -a ../%{name}-%{version} ../%{name}-%{version}-%{release}-src
  mv ../%{name}-%{version}-%{release}-src .
  
 +# ngx_mruby
 +cd %{_builddir}
 +tar xzf %{SOURCE300}
-+tar xzf %{SOURCE301}
 +cd ngx_mruby-2.2.5
-+./configure --enable-dynamic-module --with-ngx-src-root=../nginx-%{version} --with-ndk-root=../ngx_devel_kit-0.3.1
++./configure --enable-dynamic-module --with-ngx-src-root=../nginx-%{version}
 +make build_mruby
 +make generate_gems_config_dynamic
 +cd %{_builddir}/nginx-%{version}
  
  %build
  # nginx does not utilize a standard configure script.  It has its own
-@@ -332,6 +352,8 @@
+@@ -332,6 +350,8 @@
      --with-stream_ssl_module \
      --with-stream_ssl_preread_module \
      --with-threads \
-+    --add-dynamic-module=../ngx_devel_kit-0.3.1 \
 +    --add-dynamic-module=../ngx_mruby-2.2.5 \
++    --add-dynamic-module=../ngx_mruby-2.2.5/dependence/ngx_devel_kit \
      --with-cc-opt="%{optflags} $(pcre-config --cflags)" \
      --with-ld-opt="$nginx_ldopts"; then
    : configure failed
-@@ -431,6 +453,10 @@
+@@ -431,6 +451,10 @@
      > %{buildroot}%{nginx_moduleconfdir}/mod-mail.conf
  echo 'load_module "%{nginx_moduledir}/ngx_stream_module.so";' \
      > %{buildroot}%{nginx_moduleconfdir}/mod-stream.conf
@@ -61,7 +59,7 @@
  
  # Install files for supporting nginx module builds
  ## Install source files
-@@ -490,6 +516,11 @@
+@@ -490,6 +514,11 @@
      /usr/bin/systemctl reload nginx.service >/dev/null 2>&1 || :
  fi
  
@@ -73,7 +71,7 @@
  %preun
  %systemd_preun nginx.service
  
-@@ -580,6 +611,11 @@
+@@ -580,6 +609,11 @@
  %{nginx_moduleconfdir}/mod-stream.conf
  %{nginx_moduledir}/ngx_stream_module.so
  
